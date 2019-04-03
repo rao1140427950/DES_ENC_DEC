@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <iostream>
+#include <iomanip>
 
 typedef unsigned char uint8;
 
@@ -134,8 +135,8 @@ const uint8 P_box[32] = {
 
 //uint8 data[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
 //uint8 key[7] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x77, 0x88 };
-uint8 dat[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
-uint8 key[7] = { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01 };
+uint8 dat[8] = { 0x16, 0x71, 0x10, 0x83, 0x00, 0x00, 0x00, 0x00 };
+uint8 key[7] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 void encrypt(uint8 *dat_8bytes, uint8 *key_7bytes, uint8 *dat_enc_8bytes);
 void decrypt(uint8 *dat_8bytes, uint8 *key_7bytes, uint8 *dat_dec_8bytes);
@@ -160,7 +161,19 @@ int main()
 
 	encrypt(dat, key, encrypt_text);
 	decrypt(encrypt_text, key, decrypt_text);
-	
+	cout << "The orignal data is: ";
+	for (uint8 i = 0; i < 8; i++) cout << setw(2) << setfill('0') << hex << int(dat[i]);
+	cout << endl;
+	cout << "The key is: ";
+	for (uint8 i = 0; i < 7; i++) cout << setw(2) << setfill('0') << hex << int(key[i]);
+	cout << endl;
+	cout << "The encrypt data is: ";
+	for (uint8 i = 0; i < 8; i++) cout << setw(2) << setfill('0') << hex << int(encrypt_text[i]);
+	cout << endl;
+	cout << "The decrypt data is: ";
+	for (uint8 i = 0; i < 8; i++) cout << setw(2) << setfill('0') << hex << int(decrypt_text[i]);
+	cout << endl;
+
 	return 0;
 }
 
@@ -181,7 +194,7 @@ void decrypt(uint8 *dat_8bytes, uint8 *key_7bytes, uint8 *dat_dec_8bytes)
 	generate_key_full(key_7bytes, key_full);
 	convert2bin(dat_8bytes, data_binary);
 	convert2bin(key_full, key_binary);
-	get_CDkey(key_full, Ckey, Dkey);
+	get_CDkey(key_binary, Ckey, Dkey);
 	do_first_swap(data_binary, Ldata, Rdata);
 
 	for (uint8 i = 0; i < 16; i++)
@@ -219,7 +232,7 @@ void encrypt(uint8 *dat_8bytes, uint8 *key_7bytes, uint8 *dat_enc_8bytes)
 	generate_key_full(key_7bytes, key_full);
 	convert2bin(dat_8bytes, data_binary);
 	convert2bin(key_full, key_binary);
-	get_CDkey(key_full, Ckey, Dkey);
+	get_CDkey(key_binary, Ckey, Dkey);
 	do_first_swap(data_binary, Ldata, Rdata);
 
 	for (uint8 i = 0; i < 16; i++)
@@ -260,8 +273,8 @@ void do_inv_swap(uint8 *Ldata, uint8 *Rdata, uint8 *dat_enc_bin)
 {
 	for (uint8 i = 0; i < 64; i++)
 	{
-		if (inv_swap_table[i] < 32) dat_enc_bin[i] = Ldata[inv_swap_table[i]];
-		else dat_enc_bin[i] = Rdata[inv_swap_table[i] - 32];
+		if (inv_swap_table[i] - 1 < 32) dat_enc_bin[i] = Rdata[inv_swap_table[i] - 1];
+		else dat_enc_bin[i] = Ldata[inv_swap_table[i] - 1 - 32];
 	}
 }
 
@@ -294,7 +307,7 @@ void calc_SPbox(uint8 *dat_48bits, uint8 *dat_32bits)
 		temp[i * 4 + 2] = (s & 0x02) >> 1;
 		temp[i * 4 + 3] = s & 0x01;
 	}
-	for (uint8 i = 0; i < 32; i++) dat_32bits[i] = temp[P_box[i]];
+	for (uint8 i = 0; i < 32; i++) dat_32bits[i] = temp[P_box[i] - 1];
 }
 
 void dat_xor_key(uint8 *key_48bits, uint8 *dat_48bits, uint8 *res)
@@ -304,7 +317,7 @@ void dat_xor_key(uint8 *key_48bits, uint8 *dat_48bits, uint8 *res)
 
 void expand_Rdata(uint8 *Rdata_32bits, uint8 *Rdata_48bits)
 {
-	for (uint8 i = 0; i < 48; i++) Rdata_48bits[i] = Rdata_32bits[expandR_table[i]];
+	for (uint8 i = 0; i < 48; i++) Rdata_48bits[i] = Rdata_32bits[expandR_table[i] - 1];
 }
 
 void combine_CDkey(uint8 *Ckey, uint8 *Dkey, uint8 *key_48bits)
@@ -313,7 +326,7 @@ void combine_CDkey(uint8 *Ckey, uint8 *Dkey, uint8 *key_48bits)
 
 	for (uint8 i = 0; i < 28; i++) temp[i] = Ckey[i];
 	for (uint8 i = 0; i < 28; i++) temp[i + 28] = Dkey[i];
-	for (uint8 i = 0; i < 48; i++) key_48bits[i] = temp[PC2_table[i]];
+	for (uint8 i = 0; i < 48; i++) key_48bits[i] = temp[PC2_table[i] - 1];
 }
 
 void move_left(uint8 *dat, bool reverse)
@@ -337,14 +350,14 @@ void move_left(uint8 *dat, bool reverse)
 
 void get_CDkey(uint8 *key, uint8 *Ckey, uint8 *Dkey)
 {
-	for (uint8 i = 0; i < 28; i++) Ckey[i] = key[Ctable[i]];
-	for (uint8 i = 0; i < 28; i++) Dkey[i] = key[Dtable[i]];
+	for (uint8 i = 0; i < 28; i++) Ckey[i] = key[Ctable[i] - 1];
+	for (uint8 i = 0; i < 28; i++) Dkey[i] = key[Dtable[i] - 1];
 }
 
 void do_first_swap(uint8 *dat, uint8 *Ldata, uint8 *Rdata)
 {
-	for (uint8 i = 0; i < 32; i++) Ldata[i] = dat[first_swap_table[i]];
-	for (uint8 i = 0; i < 32; i++) Rdata[i] = dat[first_swap_table[i + 32]];
+	for (uint8 i = 0; i < 32; i++) Ldata[i] = dat[first_swap_table[i] - 1];
+	for (uint8 i = 0; i < 32; i++) Rdata[i] = dat[first_swap_table[i + 32] - 1];
 }
 
 void convert2bin(uint8 *dat, uint8 *dat_bin)
